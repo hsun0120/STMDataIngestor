@@ -1,29 +1,44 @@
 package edu.sdsc.awesome.stmDataIngestion;
 
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+/**
+ * Driver for stm data ingestor
+ * @author Haoran Sun
+ * @since 03-29-2018
+ */
 public class Driver {
+	/**
+	 * Parse topic information from stm output.
+	 * @param stmFile - stm output that contains topic scores and top 10 terms
+	 * @param exclCohrFile - stm output that contains exclusivity and semantic
+	 * coherence scores.
+	 * @return - A JSONArray representation of topics
+	 */
 	public static JSONArray getTopicInfo(String stmFile, String exclCohrFile) {
 		TopicInfo topicInfo = new TopicInfo();
 		ArrayList<Float> excl = new ArrayList<>();
 		ArrayList<Float> cohr = new ArrayList<>();
 
+		/* Read and parse exclusivity and semantic coherence socres from file */
 		try(Scanner sc = new Scanner(new FileReader(exclCohrFile))) {
 			int count = 0;
 			ArrayList<Float> storage = excl;
 			while(sc.hasNextLine()) {
 				String line = sc.nextLine().trim();
-				if(!line.startsWith("[")) continue;
-				if(line.startsWith("[1]"))
+				if(!line.startsWith("[")) continue; //Validate lines
+				if(line.startsWith("[1]")) //Check boundary of two kinds of scores
 					count++;
 				if(count > 1)
 					storage = cohr;
@@ -35,10 +50,12 @@ public class Driver {
 			e.printStackTrace();
 		}
 		
-		try(Scanner sc = new Scanner(new FileReader(stmFile))) {
+		/* Read and parse stm topic output from file */
+		try(Scanner sc = new Scanner(new FileInputStream(stmFile), 
+				StandardCharsets.UTF_8.toString())) {
 			int topicNum = 1;
 			boolean located = false;
-			while(sc.hasNextLine()) {
+			while(sc.hasNextLine()) { //Locate starting point
 				String line = sc.nextLine();
 				if(line.startsWith("A topic model with")) {
 					located = true;
@@ -46,6 +63,7 @@ public class Driver {
 				}
 				if(located) {
 					String[] textblock = new String[4];
+					/* Parse output of four different scoring methods */
 					for(int i = 0; i < textblock.length; i++)
 						textblock[i] = sc.nextLine();
 					topicInfo.ingest(textblock, excl.get(topicNum - 1), 
@@ -59,10 +77,16 @@ public class Driver {
 		return topicInfo.getAllTopicInfo();
 	}
 	
+	/**
+	 * Read and parse topic correlation matrix.
+	 * @param filename - topic correlation csv file
+	 * @return - A JSONArray representation of topic correlation matrix.
+	 */
 	public static JSONArray getTopicCorrelation(String filename) {
 		TopicCorrelation corr = new TopicCorrelation();
+		/* Read and parse topic correlation matrix line by line */
 		try(Scanner sc = new Scanner(new FileReader(filename))) {
-			sc.nextLine();
+			sc.nextLine(); //Skip header
 			while(sc.hasNextLine())
 				corr.appendRow(sc.nextLine());
 		} catch (FileNotFoundException e) {
@@ -71,9 +95,18 @@ public class Driver {
 		return corr.getCorrMatrix();
 	}
 	
+	/**
+	 * Read and parse document-topic proportion matrix; replace stm document id
+	 * with actual file id.
+	 * @param filename - a file contianing document-topic proportion matrix
+	 * @param topicInfo - a JSONArray representation of topics
+	 * @param mappings - mappings from stm document id to file id
+	 * @param threshold - cutoff for topic proportion
+	 */
 	public static void getAndInsertDocTopicProp(String filename,
 			JSONArray topicInfo, ArrayList<String> mappings, float threshold) {
 		DocumentTopicProportion dtp = new DocumentTopicProportion();
+		/* Read and parse document-topic correlation matrix line by line */
 		try(Scanner sc = new Scanner(new FileReader(filename))) {
 			sc.nextLine();
 			while(sc.hasNextLine())
@@ -81,22 +114,32 @@ public class Driver {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-		JSONArray theta = dtp.getProportionMatrix();
-		for(int i = 0; i < theta.length(); i++) {
+		JSONArray theta = dtp.getProportionMatrix(); //Parsed proportion matrix
+		for(int i = 0; i < theta.length(); i++) { //Insert to topic info JSONArray
 			JSONObject prop = theta.getJSONObject(i);
 			int topicNum = prop.getInt("Topic");
 			if(!topicInfo.getJSONObject(topicNum - 1).has("DocTopicProportion"))
 				topicInfo.getJSONObject(topicNum - 1).put("DocTopicProportion", 
 						new JSONArray());
 			JSONObject tmp = new JSONObject();
-			tmp.put("Document", Integer.parseInt(mappings.get(prop.getInt("Document")
-					- 1)));
-			tmp.put("Proportion", prop.getFloat("Proportion"));
+			tmp.put("Doc", Integer.parseInt(mappings.get(prop.getInt("Document")
+					- 1))); //Replace id
+			tmp.put("Prop", prop.getFloat("Proportion"));
 			topicInfo.getJSONObject(topicNum - 1).getJSONArray("DocTopicProportion")
 			.put(tmp);
 		}
 	}
 	
+	/**
+	 * Main method for the driver.
+	 * @param args: arg0: stm topics output file
+	 *              arg1: stm exclusivity and semantic coherence score output
+	 *              file
+	 *              arg2: topic correlation matrix file
+	 *              arg3: document-topic proportion matrix file
+	 *              arg4: mappings file that contains mappings from stm id to
+	 *              actual file id.
+	 */
 	public static void main(String[] args) {
 		ArrayList<String> mappings = new ArrayList<>();
 		try(Scanner sc = new Scanner(new FileReader(args[4]))) {
@@ -110,12 +153,12 @@ public class Driver {
 		JSONArray topicCorr = Driver.getTopicCorrelation(args[2]);
 		Driver.getAndInsertDocTopicProp(args[3], topicInfo, mappings, 0.1f);
 		JSONObject stmInfo = new JSONObject();
-		stmInfo.put("DocID", 1);
-		stmInfo.put("Predicate", "Tillerson");
+		stmInfo.put("DocID", 4);
+		stmInfo.put("Predicate", "Trump");
 		stmInfo.put("NumTopics", topicInfo.length());
 		stmInfo.put("Topics", topicInfo);
 		stmInfo.put("TopicCorr", topicCorr);
-		stmInfo.put("TopicNumAuto", true);
+		stmInfo.put("TopicNumAuto", false);
 		try(BufferedWriter writer = new BufferedWriter(new FileWriter(args[5]))) {
 			writer.write(stmInfo.toString());
 		} catch (IOException e) {

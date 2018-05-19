@@ -98,7 +98,7 @@ public class Driver {
 	/**
 	 * Read and parse document-topic proportion matrix; replace stm document id
 	 * with actual file id.
-	 * @param filename - a file contianing document-topic proportion matrix
+	 * @param filename - a file containing document-topic proportion matrix
 	 * @param topicInfo - a JSONArray representation of topics
 	 * @param mappings - mappings from stm document id to file id
 	 * @param threshold - cutoff for topic proportion
@@ -122,8 +122,7 @@ public class Driver {
 				topicInfo.getJSONObject(topicNum - 1).put("DocTopicProportion", 
 						new JSONArray());
 			JSONObject tmp = new JSONObject();
-			tmp.put("Doc", Integer.parseInt(mappings.get(prop.getInt("Document")
-					- 1))); //Replace id
+			tmp.put("Doc", mappings.get(prop.getInt("Document") - 1)); //Replace id
 			tmp.put("Prop", prop.getFloat("Proportion"));
 			topicInfo.getJSONObject(topicNum - 1).getJSONArray("DocTopicProportion")
 			.put(tmp);
@@ -151,15 +150,15 @@ public class Driver {
 		
 		JSONArray topicInfo = Driver.getTopicInfo(args[0], args[1]);
 		JSONArray topicCorr = Driver.getTopicCorrelation(args[2]);
-		Driver.getAndInsertDocTopicProp(args[3], topicInfo, mappings, 0.1f);
+		Driver.getAndInsertDocTopicProp(args[3], topicInfo, mappings, Float.parseFloat(args[5]));
 		JSONObject stmInfo = new JSONObject();
-		stmInfo.put("DocID", 4);
-		stmInfo.put("Predicate", "Trump");
+		//stmInfo.put("DocID", 3);
+		//stmInfo.put("Predicate", "Date: 2013-11-01 to 2016-11-01");
 		stmInfo.put("NumTopics", topicInfo.length());
 		stmInfo.put("Topics", topicInfo);
 		stmInfo.put("TopicCorr", topicCorr);
-		stmInfo.put("TopicNumAuto", false);
-		try(BufferedWriter writer = new BufferedWriter(new FileWriter(args[5]))) {
+		//stmInfo.put("TopicNumAuto", true);
+		try(BufferedWriter writer = new BufferedWriter(new FileWriter(args[6]))) {
 			writer.write(stmInfo.toString());
 		} catch (IOException e) {
 			e.printStackTrace();

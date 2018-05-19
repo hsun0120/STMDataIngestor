@@ -30,6 +30,7 @@ public class TopicCorrelation {
 		String[] cols = row.split(","); //Correlation scores
 		int topicId = Integer.parseInt(cols[0].replace("\"", ""));
 		for(int i = 1; i < cols.length; i++) {
+			if(cols[i].equals("0")) continue;
 			/* Check duplicate edge; each edge is not directed */
 			if(i == topicId || this.set.contains(i + " " + topicId)) continue;
 			this.set.add(topicId + " " + i);

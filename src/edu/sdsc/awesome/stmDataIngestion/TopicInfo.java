@@ -34,7 +34,7 @@ public class TopicInfo {
 		JSONObject topic = new JSONObject();
 		topic.put("TopicNum", topicNum);
 		topic.put("Exclusivity", exclusivity);
-		topic.put("Semantic Coherence", semCohr);
+		topic.put("SemanticCoherence", semCohr);
 		for(int i = 0; i < info.length; i++) {
 			String ranking = info[i].substring(info[i].indexOf(':') + 1).trim().
 					replace(",", ""); //Remove row description and commas

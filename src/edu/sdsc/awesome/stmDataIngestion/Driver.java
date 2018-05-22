@@ -66,7 +66,7 @@ public class Driver {
 					/* Parse output of four different scoring methods */
 					for(int i = 0; i < textblock.length; i++)
 						textblock[i] = sc.nextLine();
-					topicInfo.ingest(textblock, excl.get(topicNum - 1), 
+					topicInfo.ingest(topicNum, textblock, excl.get(topicNum - 1), 
 							cohr.get(topicNum - 1));
 					topicNum++;
 				}

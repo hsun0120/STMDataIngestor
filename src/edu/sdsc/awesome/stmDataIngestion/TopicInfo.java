@@ -24,12 +24,15 @@ public class TopicInfo {
 	
 	/**
 	 * Parse data for a topic from string array and store them.
+	 * @param topicNum - topic number (starting from 1)
 	 * @param info - string array of top terms using four different methods
 	 * @param exclusivity - the exclusivity score
 	 * @param semCohr - the semantic coherence score
 	 */
-	public void ingest(String[] info, float exclusivity, float semCohr) {
+	public void ingest(int topicNum, String[] info, float exclusivity, float 
+			semCohr) {
 		JSONObject topic = new JSONObject();
+		topic.put("TopicNum", topicNum);
 		topic.put("Exclusivity", exclusivity);
 		topic.put("Semantic Coherence", semCohr);
 		for(int i = 0; i < info.length; i++) {
